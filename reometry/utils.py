@@ -1,7 +1,8 @@
 from reometry.typing import *
 from transformer_lens.utils import tokenize_and_concatenate
 from datasets import load_dataset, Dataset, VerificationMode
-from transformers import PreTrainedTokenizerBase, AutoModelForCausalLM, AutoTokenizer
+from transformers import PreTrainedTokenizerBase
+import os
 
 
 def get_input_ids(
@@ -10,23 +11,29 @@ def get_input_ids(
     n_prompts: int,
     tokenizer: PreTrainedTokenizerBase,
 ):
+    data_file = f"data/train-{chunk:05d}-of-*.parquet"
     text_dataset = load_dataset(
         "sedthh/gutenberg_english",
-        data_files=f"data/train-{chunk:05}-of-*.parquet",
+        data_files=data_file,
         verification_mode=VerificationMode.NO_CHECKS,
         split="train",
     )
     text_dataset.shuffle()
     text_dataset = cast(Dataset, text_dataset)
-    text_dataset = text_dataset.select(range(10_000))
+    text_dataset = text_dataset.select(range(100))
 
+    model_max_length = tokenizer.model_max_length
+    # just to avoid the warnings
+    tokenizer.model_max_length = 10_000_000
     tokens_dataset = tokenize_and_concatenate(
         text_dataset,
         tokenizer,  # type: ignore
         max_length=seq_len,
         num_proc=os.cpu_count() - 1,  # type: ignore
         add_bos_token=False,
+        column_name="TEXT",
     )
+    tokenizer.model_max_length = model_max_length
     tokens_dataset.set_format(type="torch")
     sample_indices = random.sample(range(len(tokens_dataset)), n_prompts)
     return tokens_dataset[sample_indices]["tokens"]
@@ -45,68 +52,3 @@ def setup_determinism(seed: int):
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
-
-
-@dataclass
-class HFModel:
-    model: Any
-    tokenizer: PreTrainedTokenizerBase
-    module_template: str
-    n_params: int
-    n_layers: int
-    d_model: int
-
-    @classmethod
-    def from_model_name(cls, model_name: str, device: str) -> "HFModel":
-        if model_name.startswith("gpt2"):
-            module_template = "transformer.h.L"
-        elif model_name.startswith("pythia"):
-            module_template = "gpt_neox.layers.L"
-        else:
-            module_template = "model.layers.L"
-
-        if model_name == "gpt2_noLN":
-            model_path = "apollo-research/gpt2_noLN"
-        elif model_name.startswith("gpt2"):
-            model_path = model_name
-        elif model_name.startswith("olmo"):
-            params = model_name.split("-")[1].upper()
-            model_path = f"allenai/OLMo-{params}-hf"
-        elif model_name.startswith("gemma"):
-            model_path = f"google/{model_name}"
-        elif model_name.startswith("llama-3"):
-            version, params = model_name.split("-")[1:]
-            params = params.upper()
-            model_path = f"meta-llama/Meta-Llama-{version}-{params}"
-        elif model_name.startswith("llama-1"):
-            _version, params = model_name.split("-")[1:]
-            params = params.upper()
-            model_path = f"huggyllama/llama-{params}"
-        elif model_name.startswith("qwen-2"):
-            _version, params = model_name.split("-")[1:]
-            params = params.upper()
-            model_path = f"Qwen/Qwen2-{params}"
-        elif model_name.startswith("pythia"):
-            params = model_name.split("-")[1].upper()
-            model_path = f"EleutherAI/pythia-{params}-deduped"
-        elif model_name == "phi-2":
-            model_path = "microsoft/phi-2"
-        else:
-            raise ValueError(f"Invalid model name: {model_name}")
-
-        model = AutoModelForCausalLM.from_pretrained(model_path).to(device)
-        if model_name == "gpt2_noLN":
-            tokenizer = AutoTokenizer.from_pretrained("gpt2")
-        else:
-            tokenizer = AutoTokenizer.from_pretrained(model_path)
-
-        n_params = sum(p.numel() for p in model.parameters())
-        cfg = model.config
-        if model_name.startswith("gpt2"):
-            n_layers = cfg.n_layer
-            d_model = cfg.n_embd
-        else:
-            n_layers = cfg.num_hidden_layers
-            d_model = cfg.hidden_size
-
-        return cls(model, tokenizer, module_template, n_params, n_layers, d_model)

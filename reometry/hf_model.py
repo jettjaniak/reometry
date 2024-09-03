@@ -4,7 +4,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedTokenize
 
 @dataclass
 class ActivationCache:
-    resid_by_layer: Mapping[int, Float[torch.Tensor, " prompt seq model"]]
+    resid_by_layer: Mapping[int, Float[torch.Tensor, " prompt model"]]
     logits: Float[torch.Tensor, " prompt vocab"]
 
     def __repr__(self):
@@ -23,6 +23,8 @@ class HFModel:
     n_params: int
     n_layers: int
     d_model: int
+    d_vocab: int
+    floats_per_token: int
 
     def __repr__(self):
         return (
@@ -79,9 +81,15 @@ class HFModel:
         if model_name.startswith("gpt2"):
             n_layers = cfg.n_layer
             d_model = cfg.n_embd
+            d_ff = cfg.n_embd * 4
         else:
             n_layers = cfg.num_hidden_layers
             d_model = cfg.hidden_size
+            # works for GLUs
+            d_ff = cfg.intermediate_size * 2
+        d_vocab = cfg.vocab_size
+        # don't ask me why 4x, works on A100 80GB
+        floats_per_token = 4 * (n_layers * d_model + d_ff + d_vocab)
 
         return cls(
             model=model,
@@ -91,6 +99,8 @@ class HFModel:
             n_params=n_params,
             n_layers=n_layers,
             d_model=d_model,
+            d_vocab=d_vocab,
+            floats_per_token=floats_per_token,
         )
 
     def clean_run_with_cache(
@@ -99,11 +109,11 @@ class HFModel:
         layers: list[int],
         batch_size: int,
     ) -> ActivationCache:
-        n_prompts, seq_len = input_ids.shape
+        n_prompts = input_ids.shape[0]
         resid_by_layer = {
-            layer: torch.empty(n_prompts, seq_len, self.d_model) for layer in layers
+            layer: torch.empty(n_prompts, self.d_model) for layer in layers
         }
-        logits = torch.empty(n_prompts, self.tokenizer.vocab_size)
+        logits = torch.empty(n_prompts, self.d_vocab)
         for i in range(0, n_prompts, batch_size):
             input_ids_batch = input_ids[i : i + batch_size].to(self.model.device)
             resid_by_layer_batch, logits_batch = self.clean_run_with_cache_sigle_batch(
@@ -119,7 +129,7 @@ class HFModel:
         input_ids: Int[torch.Tensor, " prompt seq"],
         layers: list[int],
     ) -> tuple[
-        Mapping[int, Float[torch.Tensor, " prompt seq model"]],
+        Mapping[int, Float[torch.Tensor, " prompt model"]],
         Float[torch.Tensor, " prompt vocab"],
     ]:
         lm_out = self.model(
@@ -130,30 +140,29 @@ class HFModel:
             labels=None,
             return_dict=True,
         )
-        resid_by_layer = {layer: lm_out.hidden_states[layer] for layer in layers}
+        resid_by_layer = {layer: lm_out.hidden_states[layer][:, -1] for layer in layers}
         return resid_by_layer, lm_out.logits[:, -1]
 
     def patched_run_with_cache(
         self,
         input_ids: Int[torch.Tensor, " prompt seq"],
-        layer_pert: int,
-        pert_resid: Float[torch.Tensor, " prompt seq model"],
+        layer_write: int,
+        pert_resid: Float[torch.Tensor, " prompt model"],
         layers_read: list[int],
         batch_size: int,
     ) -> ActivationCache:
         def hook_fn(module, input, output):
-            input[0][:] = pert_resid_batch
+            input[0][:, -1] = pert_resid_batch
 
         n_prompts, seq_len = input_ids.shape
         resid_by_layer = {
-            layer: torch.empty(n_prompts, seq_len, self.d_model)
-            for layer in layers_read
+            layer: torch.empty(n_prompts, self.d_model) for layer in layers_read
         }
-        logits = torch.empty(n_prompts, self.tokenizer.vocab_size)
+        logits = torch.empty(n_prompts, self.d_vocab)
         for i in range(0, n_prompts, batch_size):
             input_ids_batch = input_ids[i : i + batch_size].to(self.model.device)
             pert_resid_batch = pert_resid[i : i + batch_size]
-            hook_point = self.module_template.replace("L", str(layer_pert))
+            hook_point = self.module_template.replace("L", str(layer_write))
             for name, module in self.model.named_modules():
                 if hook_point == name:
                     pert_hook = module.register_forward_hook(hook_fn)

@@ -38,8 +38,6 @@ batch_size //= 4
 print(f"{batch_size=}")
 if args.layer_read < 0:
     args.layer_read = hf_model.n_layers + args.layer_read
-# embeddings are included in HF hidden states
-args.layer_read += 1
 input_ids = utils.get_input_ids(
     chunk=0,
     seq_len=args.seq_len,

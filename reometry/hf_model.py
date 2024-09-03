@@ -141,7 +141,9 @@ class HFModel:
             labels=None,
             return_dict=True,
         )
-        resid_by_layer = {layer: lm_out.hidden_states[layer][:, -1] for layer in layers}
+        resid_by_layer = {
+            layer: lm_out.hidden_states[layer + 1][:, -1] for layer in layers
+        }
         return resid_by_layer, lm_out.logits[:, -1]
 
     def patched_run_with_cache(

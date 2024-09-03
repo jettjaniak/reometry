@@ -85,7 +85,7 @@ def linear_interpolation(
 
 def arc_interpolation(
     resid_write_a: Float[torch.Tensor, " prompt model"],
-    resid_write_a_cen_norm: Float[torch.Tensor, " model"],
+    resid_write_a_cen_norm: Float[torch.Tensor, " prompt 1"],
     resid_write_b: Float[torch.Tensor, " prompt model"],
     resid_write_mean: Float[torch.Tensor, " model"],
     alpha: float,
@@ -180,7 +180,7 @@ def interpolate_arc(
     resid_write_a_cen = resid_write_a - resid_write_mean
     resid_write_a_cen_norm = torch.norm(resid_write_a_cen, dim=-1, p=2, keepdim=True)
     for step_i in trange(inter_steps, desc="Interpolating"):
-        alpha = alphas[step_i]
+        alpha = alphas[step_i].item()
         pert_resid_acts = arc_interpolation(
             resid_write_a,
             resid_write_a_cen_norm,

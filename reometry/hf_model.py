@@ -153,7 +153,7 @@ class HFModel:
         batch_size: int,
     ) -> ActivationCache:
         def hook_fn(module, input, output):
-            input[0][:, -1] = pert_resid_batch
+            output[0][:, -1] = pert_resid_batch
 
         n_prompts, seq_len = input_ids.shape
         resid_by_layer = {

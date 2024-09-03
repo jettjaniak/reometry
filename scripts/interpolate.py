@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import argparse
-import sys
+import pickle
 
 import reometry.hf_model
 from reometry import utils
@@ -13,7 +13,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--seq-len", type=int, default=10)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--n-prompts", type=int, default=100)
-    parser.add_argument("--layer-write", type=int, default=1)
+    parser.add_argument("--layer-write", type=int, default=0)
     parser.add_argument("--layer-read", type=int, default=-1)
     parser.add_argument("--inter-steps", type=int, default=11)
     parser.add_argument("--arc", action="store_true")
@@ -37,7 +37,9 @@ batch_size = batch_size_tokens // args.seq_len
 batch_size //= 4
 print(f"{batch_size=}")
 if args.layer_read < 0:
-    args.layer_read = hf_model.n_layers + 1 + args.layer_read
+    args.layer_read = hf_model.n_layers + args.layer_read
+# embeddings are included in HF hidden states
+args.layer_read += 1
 input_ids = utils.get_input_ids(
     chunk=0,
     seq_len=args.seq_len,
@@ -84,25 +86,8 @@ else:
     )
 print(f"{resid_read_pert.shape=}")
 
-import pickle
-from dataclasses import dataclass
-
-
-@dataclass
-class InterpolationData:
-    resid_write_a: Float[torch.Tensor, " prompt model"]
-    resid_write_b: Float[torch.Tensor, " prompt model"]
-    resid_read_pert: Float[torch.Tensor, " prompt step model"]
-    resid_write_mean: Float[torch.Tensor, " model"]
-    resid_read_clean: Float[torch.Tensor, " prompt model"]
-    model_name: str
-    layer_write: int
-    layer_read: int
-    inter_steps: int
-
-
 # Create an instance of the dataclass
-interpolation_data = InterpolationData(
+interpolation_data = utils.InterpolationData(
     resid_write_a=resid_write_a,
     resid_write_b=resid_write_b,
     resid_read_pert=resid_read_pert,

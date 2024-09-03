@@ -1,5 +1,6 @@
-from beartype.claw import beartype_this_package  # <-- hype comes
 import torch
+from beartype.claw import beartype_this_package  # <-- hype comes
+
 beartype_this_package()  # <-- hype comes
 torch.set_grad_enabled(False)
 

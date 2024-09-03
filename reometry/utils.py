@@ -1,12 +1,16 @@
-from reometry.typing import *
-from transformer_lens.utils import tokenize_and_concatenate
-from datasets import load_dataset, Dataset, VerificationMode
-from transformers import PreTrainedTokenizerBase
 import os
-import torch
-from reometry.hf_model import HFModel, ActivationCache
+
 import psutil
+import torch
+from datasets import Dataset, VerificationMode, load_dataset
 from tqdm.auto import tqdm, trange
+from transformer_lens.utils import tokenize_and_concatenate
+from transformers import PreTrainedTokenizerBase
+
+from reometry.hf_model import ActivationCache, HFModel
+from reometry.typing import *
+
+
 def get_input_ids(
     chunk: int,
     seq_len: int,
@@ -64,8 +68,8 @@ def calculate_distances(
     resid_write_mean: Float[torch.Tensor, " model"],
     resid_read_clean: Float[torch.Tensor, " prompt model"],
 ) -> tuple[
-        Float[torch.Tensor, " prompt step"],
-        Float[torch.Tensor, " prompt step"],
+    Float[torch.Tensor, " prompt step"],
+    Float[torch.Tensor, " prompt step"],
 ]:
     n_prompts, inter_steps, _ = resid_read_pert.shape
 
@@ -75,9 +79,13 @@ def calculate_distances(
     alphas = torch.linspace(0, 1, inter_steps)
     for step_i, alpha in enumerate(alphas):
         pert_resid_acts = (1 - alpha) * resid_write_a + alpha * resid_write_b
-        resid_write_mean_dist[:, step_i] = torch.norm(pert_resid_acts - resid_write_mean, dim=-1)
+        resid_write_mean_dist[:, step_i] = torch.norm(
+            pert_resid_acts - resid_write_mean, dim=-1
+        )
         resid_read_pert_step = resid_read_pert[:, step_i]
-        resid_read_dist[:, step_i] = torch.norm(resid_read_pert_step - resid_read_clean, dim=-1)
+        resid_read_dist[:, step_i] = torch.norm(
+            resid_read_pert_step - resid_read_clean, dim=-1
+        )
 
     return resid_write_mean_dist, resid_read_dist
 
@@ -91,7 +99,7 @@ def interpolate(
     inter_steps: int,
     resid_write_a: Float[torch.Tensor, " prompt model"],
     resid_write_b: Float[torch.Tensor, " prompt model"],
-    batch_size: int
+    batch_size: int,
 ) -> Float[torch.Tensor, " prompt step model"]:
     n_prompts = input_ids.shape[0]
     resid_read_pert = torch.empty(n_prompts, inter_steps, hf_model.d_model)
@@ -110,6 +118,7 @@ def interpolate(
 
     return resid_read_pert
 
+
 def interpolate_arc(
     *,
     hf_model: HFModel,
@@ -120,7 +129,7 @@ def interpolate_arc(
     inter_steps: int,
     resid_write_a: Float[torch.Tensor, " prompt model"],
     resid_write_b: Float[torch.Tensor, " prompt model"],
-    batch_size: int
+    batch_size: int,
 ) -> Float[torch.Tensor, " prompt step model"]:
     n_prompts = input_ids.shape[0]
     resid_read_pert = torch.empty(n_prompts, inter_steps, hf_model.d_model)

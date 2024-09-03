@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 import argparse
 import sys
+
 import reometry.hf_model
-from reometry.typing import *
 from reometry import utils
+from reometry.typing import *
 
 
 def get_args() -> argparse.Namespace:
@@ -18,13 +19,16 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--arc", action="store_true")
     return parser.parse_args()
 
+
 args = get_args()
 print(f"{args=}")
 utils.setup_determinism(args.seed)
 device = utils.get_device_str()
 print(f"{device=}")
 total_memory = utils.get_total_memory(device)
-print(f"Total {'VRAM' if device == 'cuda' else 'RAM'}: {total_memory / (1024**3):.2f} GB")
+print(
+    f"Total {'VRAM' if device == 'cuda' else 'RAM'}: {total_memory / (1024**3):.2f} GB"
+)
 hf_model = reometry.hf_model.HFModel.from_model_name(args.model_name, device)
 print(f"{hf_model=}")
 batch_size_tokens = total_memory // (hf_model.floats_per_token * 4)
@@ -42,12 +46,14 @@ input_ids = utils.get_input_ids(
 )
 print(f"{input_ids.shape=}")
 clean_cache = hf_model.clean_run_with_cache(
-    input_ids=input_ids, layers=[args.layer_write, args.layer_read], batch_size=batch_size
+    input_ids=input_ids,
+    layers=[args.layer_write, args.layer_read],
+    batch_size=batch_size,
 )
 print(f"{clean_cache=}")
 resid_write = clean_cache.resid_by_layer[args.layer_write]
 resid_read_clean = clean_cache.resid_by_layer[args.layer_read][:-1]
-resid_write_mean  = resid_write.mean(dim=0)
+resid_write_mean = resid_write.mean(dim=0)
 print(f"resid_write_mean norm: {resid_write_mean.norm().item():.3f}")
 
 resid_write_a = resid_write[:-1]
@@ -63,7 +69,7 @@ if args.arc:
         inter_steps=args.inter_steps,
         resid_write_a=resid_write_a,
         resid_write_b=resid_write_b,
-        batch_size=batch_size
+        batch_size=batch_size,
     )
 else:
     resid_read_pert = utils.interpolate(
@@ -74,12 +80,13 @@ else:
         inter_steps=args.inter_steps,
         resid_write_a=resid_write_a,
         resid_write_b=resid_write_b,
-        batch_size=batch_size
+        batch_size=batch_size,
     )
 print(f"{resid_read_pert.shape=}")
 
-from dataclasses import dataclass
 import pickle
+from dataclasses import dataclass
+
 
 @dataclass
 class InterpolationData:
@@ -93,6 +100,7 @@ class InterpolationData:
     layer_read: int
     inter_steps: int
 
+
 # Create an instance of the dataclass
 interpolation_data = InterpolationData(
     resid_write_a=resid_write_a,
@@ -103,7 +111,7 @@ interpolation_data = InterpolationData(
     model_name=args.model_name,
     layer_write=args.layer_write,
     layer_read=args.layer_read,
-    inter_steps=args.inter_steps
+    inter_steps=args.inter_steps,
 )
 
 # Save the data to a pickle file

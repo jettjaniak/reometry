@@ -1,5 +1,6 @@
-from reometry.typing import *
 from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedTokenizerBase
+
+from reometry.typing import *
 
 
 @dataclass

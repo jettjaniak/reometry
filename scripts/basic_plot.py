@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import pickle
+from pathlib import Path
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -50,4 +51,7 @@ plt.ylim(ymin, min(ymax, args.max_y))
 plt.xlabel("interpolation $\\alpha$")
 plt.ylabel("normalized L2 distance")
 plt.title(f"model={id.model_name}\ndistance from clean run after last layer")
-plt.savefig("basic_plot.png", bbox_inches="tight")
+
+input_path = Path(args.file_path)
+output_path = f"plots/basic_plot_{input_path.stem}.png"
+plt.savefig(output_path, bbox_inches="tight")

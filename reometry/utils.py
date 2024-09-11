@@ -201,6 +201,55 @@ def interpolate_arc(
     return resid_read_pert
 
 
+def interpolate_boundary(
+    *,
+    hf_model: HFModel,
+    input_ids: Int[torch.Tensor, " prompt seq"],
+    resid_write_mean: Float[torch.Tensor, " model"],
+    layer_write: int,
+    layer_read: int,
+    inter_steps: int,
+    resid_write_a: Float[torch.Tensor, " prompt model"],
+    resid_write_b: Float[torch.Tensor, " prompt model"],
+    batch_size: int,
+) -> tuple[
+    Float[torch.Tensor, " prompt step step model"], Float[torch.Tensor, " prompt"]
+]:
+    n_prompts = input_ids.shape[0]
+    resid_read_pert = torch.empty(n_prompts, inter_steps, inter_steps, hf_model.d_model)
+    alphas = torch.linspace(0, 1, inter_steps)
+    deviations = torch.linspace(-1, 1, inter_steps)
+    # t = (<b-a, m> - <b-a, a>) / <b-a, b-a>
+    a = resid_write_a
+    b = resid_write_b
+    m = resid_write_mean
+    b_a = b - a
+    t = ((b_a * m).sum(dim=-1) - (b_a * a).sum(dim=-1)) / (b_a * b_a).sum(dim=-1)
+    t = t.unsqueeze(-1)
+    x = a + t * (b_a)
+    x_m = x - m
+    total_steps = inter_steps * inter_steps
+    with tqdm(total=total_steps, desc="Interpolating") as pbar:
+        for alpha_i in range(inter_steps):
+            alpha = alphas[alpha_i].item()
+            for deviation_i in range(inter_steps):
+                deviation = deviations[deviation_i].item()
+                pert_resid_acts = a + alpha * (b - a) + deviation * x_m
+                pert_cache = hf_model.patched_run_with_cache(
+                    input_ids=input_ids,
+                    layer_write=layer_write,
+                    pert_resid=pert_resid_acts,
+                    layers_read=[layer_read],
+                    batch_size=batch_size,
+                )
+                resid_read_pert[:, deviation_i, alpha_i] = pert_cache.resid_by_layer[
+                    layer_read
+                ]
+                pbar.update(1)
+
+    return resid_read_pert, t.squeeze()
+
+
 def get_total_memory(device: str):
     if device == "cuda":
         # Get total VRAM for CUDA devices

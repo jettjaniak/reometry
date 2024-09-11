@@ -121,10 +121,8 @@ def plot_boundary(ax, extent, clean_dist, t, ab: str):
     right_label = ab[1]
     s = 180
     lw = 2
-    a_loc = 0 if left_label == "A" else 1
-    b_loc = 1 if right_label == "B" else 0
     ax.scatter(
-        [a_loc],
+        [0],
         [0],
         c="#a5d8ff",
         s=s,
@@ -133,7 +131,7 @@ def plot_boundary(ax, extent, clean_dist, t, ab: str):
         label=left_label,
     )
     ax.scatter(
-        [b_loc],
+        [1],
         [0],
         c="#b2f2bb",
         s=s,
@@ -162,24 +160,28 @@ def plot_boundary(ax, extent, clean_dist, t, ab: str):
 
 cmap = matplotlib.colormaps["viridis"]
 for i in range(args.n_prompts - 1):
-    fig, axs = plt.subplots(1, 2, figsize=(8, 5))
+    # fig, axs = plt.subplots(1, 2, figsize=(8, 5))
+    fig, axs = plt.subplots(1, 1, figsize=(5, 4))
+    axs = [axs]
     extent_ab = extent_x + extent_y
     plot_boundary(axs[0], extent_ab, norms_ab[i], t_ab[i], "AB")
-    axs[0].set_title("start=A, end=B")
+    # axs[0].set_title("from A to B")
     extent_ba = list(reversed(extent_x)) + extent_y
-    norm_ba = norms_ba[i].flip(1)
-    plot_boundary(axs[1], extent_ba, norm_ba, t_ba[i], "BA")
-    axs[1].set_title("start=B, end=A")
+    # norm_ba = norms_ba[i].numpy()[:, ::-1]
+    # plot_boundary(axs[1], extent_ba, norm_ba, t_ba[i], "BA")
+    # axs[1].set_title("from B to A")
 
     cmap_norm = matplotlib.colors.Normalize(
         vmin=0, vmax=max(norms_ab[i].max(), norms_ba[i].max())
     )
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=cmap_norm)
     sm.set_array([])
-    cbar = fig.colorbar(
-        sm, ax=axs.ravel().tolist(), orientation="horizontal", aspect=30
-    )
-    cbar.set_label("dist(start, inter(start, end, α, β))")
+    # cbar = fig.colorbar(
+    #     sm, ax=axs.ravel().tolist(), orientation="horizontal", aspect=30
+    # )
+    cbar = fig.colorbar(sm, ax=axs[0])
+    # cbar.set_label("dist(A, inter(A, B, α, β))")
+    axs[0].set_title(f"dist(A, inter(A, B, α, β))")
 
     fig.savefig(f"diffs/diff_{i}.png", bbox_inches="tight")
     plt.close(fig)

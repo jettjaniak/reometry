@@ -147,8 +147,10 @@ def plot_boundary(ax, extent, clean_dist, t, ab: str):
     # find alpha_jump
     n_rows, n_cols = clean_dist.shape
     middle_row = clean_dist[n_rows // 2]
-    alpha_jump_i = torch.argmax(middle_row[1:] - middle_row[:-1]).item()
+    alpha_jump_i = torch.argmax(torch.abs(middle_row[1:] - middle_row[:-1])).item()
     alpha_jump = (alpha_jump_i + 0.5) / (n_cols - 1)
+    if left_label == "B":
+        alpha_jump = 1 - alpha_jump
     ax.scatter(
         [alpha_jump], [0], c="#da77f2", marker="D", s=80, label=r"$\alpha_\text{JUMP}$"
     )

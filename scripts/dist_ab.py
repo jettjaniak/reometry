@@ -49,8 +49,14 @@ clean_cache = hf_model.clean_run_with_cache(
     batch_size=batch_size,
 )
 print(f"{clean_cache=}")
+resid_write_a = clean_cache.resid_by_layer[args.layer_write][:-1]
 resid_write_b = clean_cache.resid_by_layer[args.layer_write][1:]
 resid_read_a = clean_cache.resid_by_layer[args.layer_read][:-1]
+
+dist_in = torch.norm(resid_write_a - resid_write_b, dim=1)
+print(f"{dist_in.shape=}")
+print(f"{dist_in.mean()=}")
+print(f"{dist_in.std()=}")
 
 cache_b = hf_model.patched_run_with_cache(
     input_ids=input_ids[:-1],
@@ -62,10 +68,10 @@ cache_b = hf_model.patched_run_with_cache(
 print(f"{cache_b=}")
 resid_read_b = cache_b.resid_by_layer[args.layer_read]
 
-dist = torch.norm(resid_read_a - resid_read_b, dim=1)
-print(f"{dist.shape=}")
-print(f"{dist.mean()=}")
-print(f"{dist.std()=}")
+dist_out = torch.norm(resid_read_a - resid_read_b, dim=1)
+print(f"{dist_out.shape=}")
+print(f"{dist_out.mean()=}")
+print(f"{dist_out.std()=}")
 
 output_filename = (
     f"data/dist_ab_{args.model_name}_"
@@ -73,6 +79,6 @@ output_filename = (
     f"P{args.n_prompts}_Se{args.seed}.pkl"
 )
 with open(output_filename, "wb") as f:
-    pickle.dump(dist, f)
+    pickle.dump((dist_in, dist_out), f)
 
 print(f"Distances saved to {output_filename}")

@@ -9,13 +9,13 @@ from reometry.typing import *
 
 def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model-name", type=str, default="gpt2")
+    parser.add_argument("--model-name", "-m", type=str, default="gpt2")
     parser.add_argument("--seq-len", type=int, default=10)
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--n-prompts", type=int, default=100)
+    parser.add_argument("--n-prompts", "-n", type=int, default=100)
     parser.add_argument("--layer-write", type=int, default=0)
     parser.add_argument("--layer-read", type=int, default=-1)
-    parser.add_argument("--inter-steps", type=int, default=11)
+    parser.add_argument("--inter-steps", "-i", type=int, default=11)
     parser.add_argument("--arc", action="store_true")
     return parser.parse_args()
 

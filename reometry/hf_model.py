@@ -68,6 +68,8 @@ class HFModel:
             model_path = f"EleutherAI/pythia-{params}-deduped"
         elif model_name == "phi-2":
             model_path = "microsoft/phi-2"
+        elif model_name.startswith("rand"):
+            model_path = f"jettjaniak/{model_name}"
         else:
             raise ValueError(f"Invalid model name: {model_name}")
 

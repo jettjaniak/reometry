@@ -62,7 +62,7 @@ def setup_determinism(seed: int):
     random.seed(seed)
 
 
-@dataclass
+@dataclass(kw_only=True)
 class InterpolationData:
     resid_write_a: Float[torch.Tensor, " prompt model"]
     resid_write_b: Float[torch.Tensor, " prompt model"]
@@ -73,6 +73,14 @@ class InterpolationData:
     layer_write: int
     layer_read: int
     inter_steps: int
+
+
+@dataclass(kw_only=True)
+class InterpolationDataDifferent(InterpolationData):
+    logit_diff: Float[torch.Tensor, " prompt step"]
+    top_toks_a: Int[torch.Tensor, " prompt"]
+    top_toks_b: Int[torch.Tensor, " prompt"]
+    tokenizer: PreTrainedTokenizerBase
 
 
 def linear_interpolation(
@@ -160,6 +168,46 @@ def interpolate(
         resid_read_pert[:, step_i] = pert_cache.resid_by_layer[layer_read]
 
     return resid_read_pert
+
+
+def interpolate_different(
+    *,
+    hf_model: HFModel,
+    input_ids: Int[torch.Tensor, " prompt seq"],
+    layer_write: int,
+    layer_read: int,
+    inter_steps: int,
+    resid_write_a: Float[torch.Tensor, " prompt model"],
+    resid_write_b: Float[torch.Tensor, " prompt model"],
+    top_toks_a: Int[torch.Tensor, " prompt"],
+    top_toks_b: Int[torch.Tensor, " prompt"],
+    batch_size: int,
+) -> tuple[
+    Float[torch.Tensor, " prompt step model"], Float[torch.Tensor, " prompt step"]
+]:
+    n_prompts = input_ids.shape[0]
+    resid_read_pert = torch.empty(n_prompts, inter_steps, hf_model.d_model)
+    logit_diff = torch.empty(n_prompts, inter_steps)
+    alphas = torch.linspace(0, 1, inter_steps)
+    for step_i in trange(inter_steps, desc="Interpolating"):
+        alpha = alphas[step_i].item()
+        pert_resid_acts = linear_interpolation(resid_write_a, resid_write_b, alpha)
+        pert_cache = hf_model.patched_run_with_cache(
+            input_ids=input_ids,
+            layer_write=layer_write,
+            pert_resid=pert_resid_acts,
+            layers_read=[layer_read],
+            batch_size=batch_size,
+        )
+        resid_read_pert[:, step_i] = pert_cache.resid_by_layer[layer_read]
+        n_prompts = input_ids.shape[0]
+        prompt_ids = torch.arange(n_prompts)
+        logit_diff[:, step_i] = (
+            pert_cache.logits[prompt_ids, top_toks_a]
+            - pert_cache.logits[prompt_ids, top_toks_b]
+        )
+
+    return resid_read_pert, logit_diff
 
 
 def interpolate_arc(

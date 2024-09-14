@@ -22,16 +22,18 @@ def get_args() -> argparse.Namespace:
 args = get_args()
 
 with open(args.file_path_1, "rb") as f:
-    dist1 = pickle.load(f)
+    _dist1_in, dist1_out = pickle.load(f)
 with open(args.file_path_2, "rb") as f:
-    dist2 = pickle.load(f)
+    _dist2_in, dist2_out = pickle.load(f)
 
 plt.figure(figsize=(5, 3.5))
-plt.scatter(dist1, dist2, alpha=0.1, s=6)
+plt.scatter(dist1_out, dist2_out, alpha=0.1, s=6)
 plt.xlabel("model 1")
 plt.ylabel("model 2")
 
 input_path_1 = Path(args.file_path_1)
 input_path_2 = Path(args.file_path_2)
-output_path = f"plots/dist_scatter_{input_path_1.stem}_{input_path_2.stem}.png"
+output_path = (
+    f"plots/dist_out_scatter_2_models_{input_path_1.stem}_{input_path_2.stem}.png"
+)
 plt.savefig(output_path, bbox_inches="tight")

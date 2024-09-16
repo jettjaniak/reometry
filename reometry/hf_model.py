@@ -48,7 +48,7 @@ class HFModel:
             model_path = model_name
         elif model_name.startswith("olmo"):
             params = model_name.split("-")[1].upper()
-            model_path = f"allenai/OLMo-{params}-hf"
+            model_path = f"allenai/OLMo-{params}-0724-hf"
         elif model_name.startswith("gemma"):
             model_path = f"google/{model_name}"
         elif model_name.startswith("llama-3"):

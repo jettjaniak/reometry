@@ -16,6 +16,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--layer-write", type=int, default=0)
     parser.add_argument("--layer-read", type=int, default=-1)
     parser.add_argument("--inter-steps", "-i", type=int, default=11)
+    parser.add_argument("--revision", "-r", type=str, default=None)
     parser.add_argument("--arc", action="store_true")
     return parser.parse_args()
 
@@ -29,7 +30,9 @@ total_memory = utils.get_total_memory(device)
 print(
     f"Total {'VRAM' if device == 'cuda' else 'RAM'}: {total_memory / (1024**3):.2f} GB"
 )
-hf_model = reometry.hf_model.HFModel.from_model_name(args.model_name, device)
+hf_model = reometry.hf_model.HFModel.from_model_name(
+    args.model_name, device, revision=args.revision
+)
 print(f"{hf_model=}")
 batch_size_tokens = total_memory // (hf_model.floats_per_token * 4)
 print(f"{batch_size_tokens=}")
@@ -84,6 +87,7 @@ else:
     )
 print(f"{resid_read_pert.shape=}")
 
+model_name = f"{args.model_name}[{args.revision}]" if args.revision else args.model_name
 # Create an instance of the dataclass
 interpolation_data = utils.InterpolationData(
     resid_write_a=resid_write_a,
@@ -91,7 +95,7 @@ interpolation_data = utils.InterpolationData(
     resid_read_pert=resid_read_pert,
     resid_write_mean=resid_write_mean,
     resid_read_clean=resid_read_clean,
-    model_name=args.model_name,
+    model_name=model_name,
     layer_write=args.layer_write,
     layer_read=args.layer_read,
     inter_steps=args.inter_steps,
@@ -100,7 +104,7 @@ interpolation_data = utils.InterpolationData(
 # Save the data to a pickle file
 arc_prefix = "arc_" if args.arc else ""
 output_filename = (
-    f"data/{arc_prefix}{args.model_name}_"
+    f"data/{arc_prefix}{model_name}_"
     f"L{args.layer_write}_L{args.layer_read}_"
     f"P{args.n_prompts}_St{args.inter_steps}_Se{args.seed}.pkl"
 )

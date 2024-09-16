@@ -34,7 +34,9 @@ class HFModel:
         )
 
     @classmethod
-    def from_model_name(cls, model_name: str, device: str) -> "HFModel":
+    def from_model_name(
+        cls, model_name: str, device: str, revision: str | None = None
+    ) -> "HFModel":
         if model_name.startswith("gpt2"):
             module_template = "transformer.h.L"
         elif model_name.startswith("pythia"):
@@ -73,7 +75,9 @@ class HFModel:
         else:
             raise ValueError(f"Invalid model name: {model_name}")
 
-        model = AutoModelForCausalLM.from_pretrained(model_path).to(device)
+        model = AutoModelForCausalLM.from_pretrained(model_path, revision=revision).to(
+            device
+        )
         if model_name == "gpt2_noLN":
             tokenizer = AutoTokenizer.from_pretrained("gpt2")
         else:
@@ -94,6 +98,7 @@ class HFModel:
         # don't ask me why 4x, works on A100 80GB
         floats_per_token = 4 * (n_layers * d_model + d_ff + d_vocab)
 
+        model_name = f"{model_name}[{revision}]" if revision else model_name
         return cls(
             model=model,
             name=model_name,

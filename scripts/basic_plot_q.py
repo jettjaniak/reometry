@@ -36,7 +36,7 @@ dist = dist_all[dist_all_mask]
 dist_norm = dist / dist[:, -1:]
 
 alphas = torch.linspace(0, 1, id.inter_steps)
-plt.figure(figsize=(5, 3.5))
+plt.figure(figsize=(3.5, 2.5), dpi=300)
 
 # Calculate median and quartiles
 median = torch.median(dist_norm, dim=0).values

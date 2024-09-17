@@ -9,7 +9,7 @@ from reometry.typing import *
 
 def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model-name", "-m", type=str, default="gpt2")
+    parser.add_argument("--model-name", "-m", type=str, default="qwen-2-0.5b")
     parser.add_argument("--layer-write", type=int, default=0)
     parser.add_argument("--layer-read", type=int, default=-1)
     parser.add_argument("--inter-steps", "-i", type=int, default=11)
@@ -17,6 +17,7 @@ def get_args() -> argparse.Namespace:
 
 
 args = get_args()
+assert args.model_name.startswith("qwen-2")
 print(f"{args=}")
 device = utils.get_device_str()
 print(f"{device=}")

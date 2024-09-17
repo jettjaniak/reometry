@@ -35,7 +35,7 @@ if args.layer_read < 0:
 prompt_pairs = [
     # D1
     (
-        " The house at the end of the street was weirdly",
+        " The house at the end of the street was very",
         " The house at the end of the street was in",
     ),
     # D2

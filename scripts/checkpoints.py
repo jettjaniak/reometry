@@ -160,6 +160,8 @@ def plot_max_deriv():
     # ax_last.set_xticks(xticks, xticklabels)
     # # ax_last.set_yticks([1, 5, 10, 15], ["1", "5", "10", "15"])
 
+    ax_last.legend(loc="upper left", fontsize="small", title="model")
+
 
 plot_max_deriv()
 

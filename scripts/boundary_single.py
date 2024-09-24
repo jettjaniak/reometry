@@ -80,29 +80,11 @@ resid_read_pert_ab, t_ab = utils.interpolate_boundary(
 )
 print(f"{resid_read_pert_ab.shape=}")
 
-resid_read_pert_ba, t_ba = utils.interpolate_boundary(
-    hf_model=hf_model,
-    input_ids=input_ids[1:],
-    resid_write_mean=resid_write_mean,
-    layer_write=args.layer_write,
-    layer_read=args.layer_read,
-    inter_steps=args.inter_steps,
-    resid_write_a=resid_write_b,
-    resid_write_b=resid_write_a,
-    batch_size=batch_size,
-)
-print(f"{resid_read_pert_ba.shape=}")
-
 # compute diff from resid_read_clean
 diffs_ab = resid_read_pert_ab - resid_read_clean_a.view(args.n_prompts - 1, 1, 1, -1)
 print(f"{diffs_ab.shape=}")
 norms_ab = diffs_ab.norm(dim=-1)
 print(f"{norms_ab.shape=}")
-
-diffs_ba = resid_read_pert_ba - resid_read_clean_b.view(args.n_prompts - 1, 1, 1, -1)
-print(f"{diffs_ba.shape=}")
-norms_ba = diffs_ba.norm(dim=-1)
-print(f"{norms_ba.shape=}")
 
 
 margin = 0.5 / (args.inter_steps - 1)

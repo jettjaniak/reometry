@@ -30,8 +30,8 @@ def find_closest_revisions(
 
 
 def main():
-    model_name = "allenai/OLMo-1B-0724-hf"
-    target_tokens = [100, 500, 1_000]
+    model_name = "allenai/OLMo-7B-0724-hf"
+    target_tokens = [250]
 
     try:
         revisions = get_model_revisions(model_name)

@@ -31,7 +31,8 @@ def find_closest_revisions(
 
 def main():
     model_name = "allenai/OLMo-7B-0724-hf"
-    target_tokens = [250]
+    target_tokens = [0, 10, 100, 251, 501] + [50, 800, 1200, 1700]
+    target_tokens.sort()
 
     try:
         revisions = get_model_revisions(model_name)
@@ -42,6 +43,9 @@ def main():
             print(f"Closest to {target}B tokens: step{step}-tokens{tokens}B")
         for target, (step, tokens) in zip(target_tokens, closest_revisions):
             print(f"step{step}-tokens{tokens}B", end=" ")
+        print()
+        for target, (step, tokens) in zip(target_tokens, closest_revisions):
+            print(f"step{step}-tokens{tokens}B", end=",")
         print()
     except Exception as e:
         print(f"Error fetching revisions: {e}")

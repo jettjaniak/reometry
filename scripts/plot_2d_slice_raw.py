@@ -15,6 +15,7 @@ def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("file_path", type=str)
     parser.add_argument("-c", "--color-scale", type=float, default=0.5)
+    parser.add_argument("--dpi", type=int, default=150)
     return parser.parse_args()
 
 
@@ -43,7 +44,7 @@ def get_colors(idx):
 
 
 def plot_2d_slice(dist_a, dist_b, dist_c, t, output_path):
-    plt.figure(figsize=(4, 4))
+    plt.figure(figsize=(4, 4), dpi=args.dpi)
     dist = torch.stack([dist_a, dist_b, dist_c], dim=-1)
     dist /= dist.max(dim=0, keepdim=True).values.max(dim=1, keepdim=True).values
     plt.imshow(

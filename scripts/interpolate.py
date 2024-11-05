@@ -104,7 +104,7 @@ interpolation_data = utils.InterpolationData(
 # Save the data to a pickle file
 arc_prefix = "arc_" if args.arc else ""
 output_filename = (
-    f"data/{arc_prefix}{model_name}_"
+    f"stable_regions/{arc_prefix}{model_name}_"
     f"L{args.layer_write}_L{args.layer_read}_"
     f"P{args.n_prompts}_St{args.inter_steps}_Se{args.seed}.pkl"
 )

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import pickle
+from pathlib import Path
 
 import reometry.hf_model
 from reometry import utils
@@ -103,16 +104,17 @@ interpolation_data = utils.InterpolationData(
 
 # Save the data to a pickle file
 arc_prefix = "arc_" if args.arc else ""
-output_filename = (
-    f"stable_regions/{arc_prefix}{model_name}_"
+output_dir = Path("stable_regions")
+output_filename = Path(
+    f"{arc_prefix}{model_name}_"
     f"L{args.layer_write}_L{args.layer_read}_"
     f"P{args.n_prompts}_St{args.inter_steps}_Se{args.seed}.pkl"
 )
-with open(output_filename, "wb") as f:
+with open(output_dir / output_filename, "wb") as f:
     pickle.dump(interpolation_data, f)
 
 print(f"Interpolation data saved to {output_filename}")
-
+torch.save(input_ids, output_dir / f"{output_filename.stem}_input_ids.pt")
 # resid_write_mean_dist, resid_read_dist = utils.calculate_distances(
 #     resid_write_a=resid_write_a,
 #     resid_write_b=resid_write_b,
